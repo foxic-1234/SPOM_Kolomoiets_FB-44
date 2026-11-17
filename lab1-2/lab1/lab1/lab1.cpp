@@ -34,6 +34,7 @@ public:
 	BigInt(const string& hexInput);
 	BigInt(const uint32_t x);
 	BigInt operator+ (const BigInt& B) const;
+	BigInt operator- (const BigInt& B) const;
 	bool operator== (const BigInt& B) const;
 	bool operator!= (const BigInt& B) const;
 	bool operator< (const BigInt& B) const;
@@ -150,6 +151,32 @@ BigInt BigInt::operator+ (const BigInt& B) const
 	return C;
 }
 
+BigInt BigInt::operator- (const BigInt& B) const
+{
+	BigInt C;
+	int64_t borrow = 0;
+	for (int i = 0; i < b; i++)
+	{
+		int64_t temp = (int64_t)A[i] - B.A[i] - borrow;
+		if (temp < 0)
+		{
+			temp += 0x100000000LL;
+			borrow = 1;
+		}
+		else
+		{
+			borrow = 0;
+		}
+
+		C.A[i] = (uint32_t)temp;
+	}
+	if (borrow != 0)
+	{
+		throw underflow_error("result of subtraction is negative");
+	}
+	return C;
+}
+
 string BigInt::toHex() const
 {
 	const char* digits = "0123456789ABCDEF";
@@ -200,6 +227,25 @@ int main()
 	cout << (BigInt(5) == BigInt("0x0005")) << endl;
 	cout << (BigInt("FFFFFFFF") + 1 == BigInt("100000000")) << endl;
 
+	cout << (BigInt("100000000") - BigInt(1)).toHex() << endl;
+	cout << (BigInt(10) - BigInt(3)).toHex() << endl;
+	cout << (BigInt("ABCDEF") - BigInt("ABCDEF")).toHex() << endl;
+	cout << (BigInt("1" + string(100, '0')) - 1).toHex() << endl;
+
+	BigInt a("123456789ABCDEF0123456789ABCDEF");
+	BigInt c("FEDCBA9876543210");
+	cout << ((a + c) - c == a) << endl;
+	cout << ((a - c) + c == a) << endl;
+
+	try
+	{
+		BigInt r = BigInt(5) - BigInt(7);
+		cout << "ERROR: no exception, got " << r.toHex() << endl;
+	}
+	catch (const underflow_error& e)
+	{
+		cout << "OK, exception: " << e.what() << endl;
+	}
 
 	return 0;
 }
