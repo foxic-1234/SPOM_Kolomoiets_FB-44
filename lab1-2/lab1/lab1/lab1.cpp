@@ -53,6 +53,10 @@ public:
 
 	BigInt operator+ (const BigInt& B) const;
 	BigInt operator- (const BigInt& B) const;
+	BigInt mulOneDigit(uint32_t d) const;
+	BigInt operator* (const BigInt& B) const;
+	BigInt square() const;
+
 };
 
 BigInt::BigInt(const uint32_t x)
@@ -305,78 +309,139 @@ BigInt BigInt::operator- (const BigInt& B) const
 	return C;
 }
 
-int main()
+BigInt BigInt::mulOneDigit(uint32_t d) const
 {
-	cout << boolalpha;
+	BigInt C;
+	uint64_t carry = 0;
+	for (int i = 0; i < b; i++)
+	{
+		uint64_t temp = (uint64_t)A[i] * d + carry;
+		C.A[i] = (uint32_t)temp;
+		carry = temp >> w;
+	}
+	return C;
+}
 
-	cout << BigInt("FFFFFFFF").toHex() << endl;
-	cout << (BigInt("FFFFFFFF") + BigInt("1")).toHex() << endl;
-	cout << BigInt("0x00ABC").toHex() << endl;
-	cout << BigInt("").toHex() << endl;
-	cout << BigInt("1234ABCD9876FFFF").toHex() << endl;
+BigInt BigInt::operator* (const BigInt& B) const
+{
+	BigInt C;
+	for (int i = 0; i < b; i++)
+	{
+		if (B.A[i] == 0)
+		{
+			continue;
+		}
+		BigInt temp = mulOneDigit(B.A[i]);
+		temp = temp.shiftLeft(i * w);
+		C = C + temp;
+	}
+	return C;
+}
 
-	cout << BigInt(0).toHex() << endl;
-	cout << BigInt(1).toHex() << endl;
-	cout << BigInt(255).toHex() << endl;
-	cout << BigInt(4294967295u).toHex() << endl;
-	cout << (BigInt(4294967295u) + BigInt(1)).toHex() << endl;
+BigInt BigInt::square() const
+{
+	int n = (bitLength() + w - 1) / w;
 
+	if (n <= 8 || n > b / 2)
+	{
+		return *this * *this;
+	}
+
+	int m = n / 2;
+	BigInt x1 = shiftRight(m * w);
+	BigInt x0 = *this - x1.shiftLeft(m * w);
+
+	BigInt z0 = x0.square();
+	BigInt z2 = x1.square();
+	BigInt z1 = (x0 + x1).square() - z0 - z2;
+
+	return z2.shiftLeft(2 * m * w) + z1.shiftLeft(m * w) + z0;
+}
+
+int testsPassed = 0;
+int testsFailed = 0;
+
+void check(const string& name, bool ok)
+{
+	cout << (ok ? "[ OK ] " : "[FAIL] ") << name << endl;
+	if (ok)
+	{
+		testsPassed++;
+	}
+	else
+	{
+		testsFailed++;
+	}
+}
+
+bool subtractionThrows()
+{
+	try
+	{
+		BigInt(5) - BigInt(7);
+		return false;
+	}
+	catch (const underflow_error&)
+	{
+		return true;
+	}
+}
+
+void runTests()
+{
+	BigInt a("123456789ABCDEF0123456789ABCDEF");
+	BigInt c("FEDCBA9876543210");
+	BigInt d("ABCDEF0123456789");
 	BigInt x("100000000");
 	BigInt y("FFFFFFFF");
 
-	cout << x.cmp(y) << endl;
-	cout << y.cmp(x) << endl;
-	cout << x.cmp(x) << endl;
+	cout << "--- Hex conversion and constants ---" << endl;
+	check("hex round trip", BigInt("1234ABCD9876FFFF").toHex() == "1234ABCD9876FFFF");
+	check("0x prefix and leading zeros", BigInt("0x00ABC").toHex() == "ABC");
+	check("empty string is zero", BigInt("").toHex() == "0");
+	check("small constant", BigInt(255).toHex() == "FF");
 
-	cout << (x > y)  << endl;
-	cout << (x < y)  << endl;
-	cout << (x == y) << endl;
-	cout << (x != y) << endl;
-	cout << (x >= x) << endl;
-	cout << (x <= x) << endl;
-	cout << (BigInt(0) == BigInt("")) << endl;
-	cout << (BigInt(5) == BigInt("0x0005")) << endl;
-	cout << (BigInt("FFFFFFFF") + 1 == BigInt("100000000")) << endl;
+	cout << "--- Comparison ---" << endl;
+	check("2^32 > 2^32 - 1", x > y && y < x);
+	check("equal / not equal", x == x && x != y);
+	check("<= and >= on equal numbers", x <= x && x >= x);
 
-	cout << (BigInt("100000000") - BigInt(1)).toHex() << endl;
-	cout << (BigInt(10) - BigInt(3)).toHex() << endl;
-	cout << (BigInt("ABCDEF") - BigInt("ABCDEF")).toHex() << endl;
-	cout << (BigInt("1" + string(100, '0')) - 1).toHex() << endl;
+	cout << "--- Addition and subtraction ---" << endl;
+	check("carry between words", y + 1 == x);
+	check("borrow between words", x - 1 == y);
+	check("(a + c) - c == a", (a + c) - c == a);
+	check("negative result throws", subtractionThrows());
 
-	BigInt a("123456789ABCDEF0123456789ABCDEF");
-	BigInt c("FEDCBA9876543210");
-	cout << ((a + c) - c == a) << endl;
-	cout << ((a - c) + c == a) << endl;
+	cout << "--- Bits and shifts ---" << endl;
+	check("getBit of 5 = 101", BigInt(5).getBit(0) && !BigInt(5).getBit(1) && BigInt(5).getBit(2));
+	check("bitLength(2^32) == 33", x.bitLength() == 33);
+	check("shiftLeft across words", y.shiftLeft(36).toHex() == "FFFFFFFF000000000");
+	check("shiftLeft then shiftRight", a.shiftLeft(77).shiftRight(77) == a);
+	check("shift out of range gives 0", BigInt(1).shiftLeft(2048) == BigInt(0));
 
-	try
+	cout << "--- Multiplication ---" << endl;
+	check("FFFFFFFF * FFFFFFFF", (y * y).toHex() == "FFFFFFFE00000001");
+	check("a * c (checked with Python)", (a * c).toHex() == "121FA00AD77D7422358D29092D964322236D88FE5618CF0");
+	check("a * c == c * a", a * c == c * a);
+	check("(a + c) * d == a * d + c * d", (a + c) * d == a * d + c * d);
+
+	BigInt sum100;
+	for (int i = 0; i < 100; i++)
 	{
-		BigInt r = BigInt(5) - BigInt(7);
-		cout << "ERROR: no exception, got " << r.toHex() << endl;
+		sum100 = sum100 + a;
 	}
-	catch (const underflow_error& e)
-	{
-		cout << "OK, exception: " << e.what() << endl;
-	}
+	check("a * 100 == a + a + ... + a", a * 100 == sum100);
 
-	BigInt five(5);
-	cout << five.getBit(0) << " " << five.getBit(1) << " " << five.getBit(2) << endl;
-	BigInt s;
-	s.setBit(100);
-	cout << (s == BigInt("1" + string(25, '0'))) << endl;
-	cout << BigInt(0).bitLength() << " " << BigInt(1).bitLength() << " "
-	     << BigInt(255).bitLength() << " " << BigInt("100000000").bitLength() << endl;
-	cout << (BigInt(1).shiftLeft(100) == s) << endl;
-	cout << BigInt("FFFFFFFF").shiftLeft(4).toHex() << endl;
-	cout << BigInt("FFFFFFFF").shiftLeft(32).toHex() << endl;
-	cout << BigInt("FFFFFFFF").shiftLeft(36).toHex() << endl;
-	cout << BigInt(1).shiftLeft(2047).bitLength() << endl;
-	cout << BigInt(1).shiftLeft(2048).toHex() << endl;
-	cout << BigInt("FFFFFFFF0").shiftRight(4).toHex() << endl;
-	cout << BigInt("123456789ABCDEF").shiftRight(8).toHex() << endl;
-	cout << BigInt("123456789ABCDEF").shiftRight(32).toHex() << endl;
-	cout << BigInt("123456789ABCDEF").shiftRight(64).toHex() << endl;
-	BigInt t("123456789ABCDEF0123456789ABCDEF");
-	cout << (t.shiftLeft(77).shiftRight(77) == t) << endl;
+	cout << "--- Square (Karatsuba) ---" << endl;
+	BigInt big(string(256, 'F'));
+	check("square == a * a (small)", a.square() == a * a);
+	check("square == a * a (1024 bits)", big.square() == big * big);
 
+	cout << endl << "Passed: " << testsPassed << ", failed: " << testsFailed << endl;
+}
+
+int main()
+{
+	runTests();
 	return 0;
 }
