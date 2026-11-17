@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 using namespace std;
+
 int hexDigit(char c)
 {
 	if (c >= '0' && c <= '9')
@@ -31,19 +32,27 @@ private:
 
 public:
 	BigInt() {};
-	BigInt(const string& hexInput);
 	BigInt(const uint32_t x);
-	BigInt operator+ (const BigInt& B) const;
-	BigInt operator- (const BigInt& B) const;
+	BigInt(const string& hexInput);
+
+	string toHex() const;
+
+	int cmp (const BigInt& B) const;
 	bool operator== (const BigInt& B) const;
 	bool operator!= (const BigInt& B) const;
 	bool operator< (const BigInt& B) const;
 	bool operator<= (const BigInt& B) const;
 	bool operator> (const BigInt& B) const;
 	bool operator>= (const BigInt& B) const;
-	string toHex() const;
-	int cmp (const BigInt& B) const;
+
+	BigInt operator+ (const BigInt& B) const;
+	BigInt operator- (const BigInt& B) const;
 };
+
+BigInt::BigInt(const uint32_t x)
+{
+	A[0] = x;
+}
 
 BigInt::BigInt(const string& hexInput)
 {
@@ -57,7 +66,7 @@ BigInt::BigInt(const string& hexInput)
 	size_t first = hex.find_first_not_of('0');
 	hex = (first == string::npos) ? "" : hex.substr(first);
 
-	if (hex.size() > (size_t)b * 8)
+	if (hex.size() > (size_t)b * (w / 4))
 	{
 		throw overflow_error("hex string is longer than BigInt capacity");
 	}
@@ -65,9 +74,9 @@ BigInt::BigInt(const string& hexInput)
 	int n = (int)hex.size();
 	for (int i = 0; i < b; i++)
 	{
-		for (int j = 0; j < 8; j++)
+		for (int j = 0; j < (w / 4); j++)
 		{
-			int pos = n - 1 - (i * 8 + j);
+			int pos = n - 1 - (i * (w / 4) + j);
 
 			if (pos < 0)
 			{
@@ -87,9 +96,22 @@ BigInt::BigInt(const string& hexInput)
 	}
 }
 
-BigInt::BigInt(const uint32_t x)
+string BigInt::toHex() const
 {
-	A[0] = x;
+	const char* digits = "0123456789ABCDEF";
+	string result;
+
+	for (int i = b - 1; i >= 0; i--)
+	{
+		for (int j = (w / 4) - 1; j >= 0; j--)
+		{
+			uint32_t d = (A[i] >> (4 * j)) & 0xF;
+			result += digits[d];
+		}
+	}
+	size_t first = result.find_first_not_of('0');
+	result = (first == string::npos) ? "0" : result.substr(first);
+	return result;
 }
 
 int BigInt::cmp (const BigInt& B) const
@@ -144,7 +166,7 @@ BigInt BigInt::operator+ (const BigInt& B) const
 	uint64_t carry = 0;
 	for (int i = 0; i < b; i++)
 	{
-		uint64_t temp = uint64_t(this->A[i]) + uint64_t(B.A[i]) + carry;
+		uint64_t temp = uint64_t(A[i]) + uint64_t(B.A[i]) + carry;
 		C.A[i] = temp & ((uint32_t)-1);
 		carry = temp >> w;
 	}
@@ -168,7 +190,7 @@ BigInt BigInt::operator- (const BigInt& B) const
 			borrow = 0;
 		}
 
-		C.A[i] = (uint32_t)temp;
+		C.A[i] = temp & ((uint32_t)-1);
 	}
 	if (borrow != 0)
 	{
@@ -177,28 +199,11 @@ BigInt BigInt::operator- (const BigInt& B) const
 	return C;
 }
 
-string BigInt::toHex() const
-{
-	const char* digits = "0123456789ABCDEF";
-	string result;
-
-	for (int i = b - 1; i >= 0; i--)
-	{
-		for (int j = 7; j >= 0; j--)
-		{
-			uint32_t d = (A[i] >> (4 * j)) & 0xF;
-			result += digits[d];
-		}
-	}
-	size_t first = result.find_first_not_of('0');
-	result = (first == string::npos) ? "0" : result.substr(first);
-	return result;
-}
-
 int main()
 {
 	cout << boolalpha;
-	cout << BigInt("FFFFFFFF").toHex() << endl;  
+
+	cout << BigInt("FFFFFFFF").toHex() << endl;
 	cout << (BigInt("FFFFFFFF") + BigInt("1")).toHex() << endl;
 	cout << BigInt("0x00ABC").toHex() << endl;
 	cout << BigInt("").toHex() << endl;
