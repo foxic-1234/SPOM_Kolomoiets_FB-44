@@ -1,0 +1,30 @@
+# Visual Studio / VS Code local settings
+.vs/
+.vscode/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+ipch/
+
+# Build output
+x64/
+x86/
+Win32/
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.lib
+*.dll
+*.idb
+*.tlog
+*.log
+*.recipe
+*.iobj
+*.ipdb
+

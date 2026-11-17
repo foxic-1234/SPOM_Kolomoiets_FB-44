@@ -24,19 +24,39 @@ int hexDigit(char c)
 class BigInt
 {
 private:
-	static constexpr int b = 64;
+	static constexpr int BITS = 2048;
+	static constexpr int w = 32;
+	static constexpr int b = BITS / w;
 	uint32_t A[b] = { 0 };
-	int w = 32;
 
 public:
 	BigInt() {};
-	BigInt(string hex);
-	BigInt operator+ (const BigInt& B);
+	BigInt(const string& hexInput);
+	BigInt operator+ (const BigInt& B) const;
+	string toHex() const;
 };
 
-BigInt::BigInt(string hex)
+BigInt::BigInt(const string& hexInput)
 {
-	int n = hex.size();
+	string hex = hexInput;
+
+	// optional "0x" / "0X" prefix
+	if (hex.size() >= 2 && hex[0] == '0' && (hex[1] == 'x' || hex[1] == 'X'))
+	{
+		hex = hex.substr(2);
+	}
+
+	// leading zeros do not affect the value
+	size_t first = hex.find_first_not_of('0');
+	hex = (first == string::npos) ? "" : hex.substr(first);
+
+	// each word holds 8 hex digits
+	if (hex.size() > (size_t)b * 8)
+	{
+		throw overflow_error("hex string is longer than BigInt capacity");
+	}
+
+	int n = (int)hex.size();
 	for (int i = 0; i < b; i++)
 	{
 		for (int j = 0; j < 8; j++)
@@ -61,7 +81,7 @@ BigInt::BigInt(string hex)
 	}
 }
 
-BigInt BigInt::operator+ (const BigInt& B)
+BigInt BigInt::operator+ (const BigInt& B) const
 {
 	BigInt C;
 	uint64_t carry = 0;
@@ -73,6 +93,18 @@ BigInt BigInt::operator+ (const BigInt& B)
 	}
 	return C;
 
+}
+
+string BigInt::toHex() const
+{
+	string result;
+
+	for (int i = b - 1; i >= 0; i--)
+	{
+		
+	}
+
+	return result;
 }
 
 int main()
