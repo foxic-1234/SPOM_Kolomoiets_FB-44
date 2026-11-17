@@ -46,7 +46,6 @@ BigInt::BigInt(const string& hexInput)
 		hex = hex.substr(2);
 	}
 
-	// leading zeros do not affect the value
 	size_t first = hex.find_first_not_of('0');
 	hex = (first == string::npos) ? "" : hex.substr(first);
 
@@ -97,17 +96,29 @@ BigInt BigInt::operator+ (const BigInt& B) const
 
 string BigInt::toHex() const
 {
+	const char* digits = "0123456789ABCDEF";
 	string result;
 
 	for (int i = b - 1; i >= 0; i--)
 	{
-		
+		for (int j = 7; j >= 0; j--)
+		{
+			uint32_t d = (A[i] >> (4 * j)) & 0xF;
+			result += digits[d];
+		}
 	}
-
+	size_t first = result.find_first_not_of('0');
+	result = (first == string::npos) ? "0" : result.substr(first);
 	return result;
 }
 
 int main()
 {
+	cout << BigInt("FFFFFFFF").toHex() << endl;      
+	cout << (BigInt("FFFFFFFF") + BigInt("1")).toHex() << endl;
+	cout << BigInt("0x00ABC").toHex() << endl;
+	cout << BigInt("").toHex() << endl;
+	cout << BigInt("1234ABCD9876FFFF").toHex() << endl;
+
 	return 0;
 }
