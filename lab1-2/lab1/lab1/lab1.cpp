@@ -34,7 +34,14 @@ public:
 	BigInt(const string& hexInput);
 	BigInt(const uint32_t x);
 	BigInt operator+ (const BigInt& B) const;
+	bool operator== (const BigInt& B) const;
+	bool operator!= (const BigInt& B) const;
+	bool operator< (const BigInt& B) const;
+	bool operator<= (const BigInt& B) const;
+	bool operator> (const BigInt& B) const;
+	bool operator>= (const BigInt& B) const;
 	string toHex() const;
+	int cmp (const BigInt& B) const;
 };
 
 BigInt::BigInt(const string& hexInput)
@@ -84,6 +91,52 @@ BigInt::BigInt(const uint32_t x)
 	A[0] = x;
 }
 
+int BigInt::cmp (const BigInt& B) const
+{
+	for (int i = b - 1; i >= 0; i--)
+	{
+		if (A[i] > B.A[i])
+		{
+			return 1;
+		}
+		if (A[i] < B.A[i])
+		{
+			return -1;
+		}
+	}
+	return 0;
+}
+
+bool BigInt::operator== (const BigInt& B) const
+{
+	return cmp(B) == 0;
+}
+
+bool BigInt::operator!= (const BigInt& B) const
+{
+	return cmp(B) != 0;
+}
+
+bool BigInt::operator< (const BigInt& B) const
+{
+	return cmp(B) == -1;
+}
+
+bool BigInt::operator<= (const BigInt& B) const
+{
+	return cmp(B) <= 0;
+}
+
+bool BigInt::operator> (const BigInt& B) const
+{
+	return cmp(B) == 1;
+}
+
+bool BigInt::operator>= (const BigInt& B) const
+{
+	return cmp(B) >= 0;
+}
+
 BigInt BigInt::operator+ (const BigInt& B) const
 {
 	BigInt C;
@@ -95,7 +148,6 @@ BigInt BigInt::operator+ (const BigInt& B) const
 		carry = temp >> w;
 	}
 	return C;
-
 }
 
 string BigInt::toHex() const
@@ -118,6 +170,7 @@ string BigInt::toHex() const
 
 int main()
 {
+	cout << boolalpha;
 	cout << BigInt("FFFFFFFF").toHex() << endl;  
 	cout << (BigInt("FFFFFFFF") + BigInt("1")).toHex() << endl;
 	cout << BigInt("0x00ABC").toHex() << endl;
@@ -129,6 +182,24 @@ int main()
 	cout << BigInt(255).toHex() << endl;
 	cout << BigInt(4294967295u).toHex() << endl;
 	cout << (BigInt(4294967295u) + BigInt(1)).toHex() << endl;
+
+	BigInt x("100000000");
+	BigInt y("FFFFFFFF");
+
+	cout << x.cmp(y) << endl;
+	cout << y.cmp(x) << endl;
+	cout << x.cmp(x) << endl;
+
+	cout << (x > y)  << endl;
+	cout << (x < y)  << endl;
+	cout << (x == y) << endl;
+	cout << (x != y) << endl;
+	cout << (x >= x) << endl;
+	cout << (x <= x) << endl;
+	cout << (BigInt(0) == BigInt("")) << endl;
+	cout << (BigInt(5) == BigInt("0x0005")) << endl;
+	cout << (BigInt("FFFFFFFF") + 1 == BigInt("100000000")) << endl;
+
 
 	return 0;
 }
