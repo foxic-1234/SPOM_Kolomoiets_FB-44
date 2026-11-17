@@ -59,8 +59,7 @@ public:
 	void divMod(const BigInt& B, BigInt& Q, BigInt& R) const;
 	BigInt operator/ (const BigInt& B) const;
 	BigInt operator% (const BigInt& B) const;
-
-
+	BigInt pow(const BigInt& B) const;
 };
 
 BigInt::BigInt(const uint32_t x)
@@ -443,6 +442,24 @@ BigInt BigInt::operator% (const BigInt& B) const
 	return R;
 }
 
+BigInt BigInt::pow(const BigInt& B) const
+{
+	BigInt C(1);
+	for (int i = B.bitLength() - 1; i >= 0; i--)
+	{
+		if (B.getBit(i))
+		{
+			C = C * *this;
+		}
+		if (i != 0)
+		{
+			C = C.square();
+		}
+	}
+	return C;
+}
+
+
 void runTests()
 {
 	BigInt a("123456789ABCDEF0123456789ABCDEF");
@@ -503,6 +520,14 @@ void runTests()
 	check("smaller / bigger == 0", c / a == BigInt(0) && c % a == c);
 	check("division by zero throws", divisionByZeroThrows());
 
+	cout << "--- Power ---" << endl;
+	check("2^100 == 1 << 100", BigInt(2).pow(100) == BigInt(1).shiftLeft(100));
+	check("3^200 (checked with Python)", BigInt(3).pow(200).toHex() ==
+		"1FD5863C3EB0469EC21A937A76F3432FFD73D97E447606B683ECF6F6E4A7AE225BFAFF1EAAF8B0A1");
+	check("a^0 == 1, a^1 == a, a^2 == a * a", a.pow(0) == BigInt(1) && a.pow(1) == a && a.pow(2) == a * a);
+	BigInt p(12345);
+	check("p^13 * p^29 == p^42", p.pow(13) * p.pow(29) == p.pow(42));
+	check("0^5 == 0", BigInt(0).pow(5) == BigInt(0));
 
 	cout << endl << "Passed: " << testsPassed << ", failed: " << testsFailed << endl;
 }
