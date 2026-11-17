@@ -56,6 +56,10 @@ public:
 	BigInt mulOneDigit(uint32_t d) const;
 	BigInt operator* (const BigInt& B) const;
 	BigInt square() const;
+	void divMod(const BigInt& B, BigInt& Q, BigInt& R) const;
+	BigInt operator/ (const BigInt& B) const;
+	BigInt operator% (const BigInt& B) const;
+
 
 };
 
@@ -387,6 +391,58 @@ bool subtractionThrows()
 	}
 }
 
+bool divisionByZeroThrows()
+{
+	try
+	{
+		BigInt(5) / BigInt(0);
+		return false;
+	}
+	catch (const invalid_argument&)
+	{
+		return true;
+	}
+}
+
+void BigInt::divMod(const BigInt& B, BigInt& Q, BigInt& R) const
+{
+	if (B == BigInt(0))
+	{
+		throw invalid_argument("division by zero");
+	}
+
+	int k = B.bitLength();
+	R = *this;
+	Q = BigInt();
+
+	while (R >= B)
+	{
+		int t = R.bitLength();
+		BigInt C = B.shiftLeft(t - k);
+		if (R < C)
+		{
+			t--;
+			C = B.shiftLeft(t - k);
+		}
+		R = R - C;
+		Q.setBit(t - k);
+	}
+}
+
+BigInt BigInt::operator/ (const BigInt& B) const
+{
+	BigInt Q, R;
+	divMod(B, Q, R);
+	return Q;
+}
+
+BigInt BigInt::operator% (const BigInt& B) const
+{
+	BigInt Q, R;
+	divMod(B, Q, R);
+	return R;
+}
+
 void runTests()
 {
 	BigInt a("123456789ABCDEF0123456789ABCDEF");
@@ -436,6 +492,17 @@ void runTests()
 	BigInt big(string(256, 'F'));
 	check("square == a * a (small)", a.square() == a * a);
 	check("square == a * a (1024 bits)", big.square() == big * big);
+
+	cout << "--- Division ---" << endl;
+	check("100 / 7 == 14, 100 % 7 == 2", BigInt(100) / 7 == BigInt(14) && BigInt(100) % 7 == BigInt(2));
+	check("a / c (checked with Python)", (a / c).toHex() == "124924924924923" && (a % c).toHex() == "7F598F328CC265BF");
+	BigInt q, r;
+	a.divMod(c, q, r);
+	check("q * c + r == a, r < c", q * c + r == a && r < c);
+	check("a / a == 1, a / 1 == a", a / a == BigInt(1) && a / 1 == a);
+	check("smaller / bigger == 0", c / a == BigInt(0) && c % a == c);
+	check("division by zero throws", divisionByZeroThrows());
+
 
 	cout << endl << "Passed: " << testsPassed << ", failed: " << testsFailed << endl;
 }
