@@ -32,6 +32,7 @@ private:
 public:
 	BigInt() {};
 	BigInt(const string& hexInput);
+	BigInt(const uint32_t x);
 	BigInt operator+ (const BigInt& B) const;
 	string toHex() const;
 };
@@ -40,7 +41,6 @@ BigInt::BigInt(const string& hexInput)
 {
 	string hex = hexInput;
 
-	// optional "0x" / "0X" prefix
 	if (hex.size() >= 2 && hex[0] == '0' && (hex[1] == 'x' || hex[1] == 'X'))
 	{
 		hex = hex.substr(2);
@@ -49,7 +49,6 @@ BigInt::BigInt(const string& hexInput)
 	size_t first = hex.find_first_not_of('0');
 	hex = (first == string::npos) ? "" : hex.substr(first);
 
-	// each word holds 8 hex digits
 	if (hex.size() > (size_t)b * 8)
 	{
 		throw overflow_error("hex string is longer than BigInt capacity");
@@ -78,6 +77,11 @@ BigInt::BigInt(const string& hexInput)
 		}
 
 	}
+}
+
+BigInt::BigInt(const uint32_t x)
+{
+	A[0] = x;
 }
 
 BigInt BigInt::operator+ (const BigInt& B) const
@@ -114,11 +118,17 @@ string BigInt::toHex() const
 
 int main()
 {
-	cout << BigInt("FFFFFFFF").toHex() << endl;      
+	cout << BigInt("FFFFFFFF").toHex() << endl;  
 	cout << (BigInt("FFFFFFFF") + BigInt("1")).toHex() << endl;
 	cout << BigInt("0x00ABC").toHex() << endl;
 	cout << BigInt("").toHex() << endl;
 	cout << BigInt("1234ABCD9876FFFF").toHex() << endl;
+
+	cout << BigInt(0).toHex() << endl;
+	cout << BigInt(1).toHex() << endl;
+	cout << BigInt(255).toHex() << endl;
+	cout << BigInt(4294967295u).toHex() << endl;
+	cout << (BigInt(4294967295u) + BigInt(1)).toHex() << endl;
 
 	return 0;
 }
